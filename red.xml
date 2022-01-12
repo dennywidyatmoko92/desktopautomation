@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<projectConfiguration>
+    <configVersion>2</configVersion>
+    <relativeTo>WORKSPACE</relativeTo>
+    <referencedLibrary type="PYTHON" name="Zoomba" path="C:/node/Lib/site-packages/Zoomba/__init__.py" dynamic="false"/>
+    <referencedLibrary type="PYTHON" name="AutoItLibrary" path="C:/node/Lib/site-packages/AutoItLibrary/__init__.py" dynamic="false"/>
+    <referencedLibrary type="PYTHON" name="WhiteLibrary" path="C:/node/Lib/site-packages/WhiteLibrary/__init__.py" dynamic="false"/>
+    <pythonpath/>
+    <classpath/>
+    <excludedForValidation/>
+    <isValidatedFileSizeCheckingEnabled>true</isValidatedFileSizeCheckingEnabled>
+    <validatedFileMaxSize>1024</validatedFileMaxSize>
+</projectConfiguration>

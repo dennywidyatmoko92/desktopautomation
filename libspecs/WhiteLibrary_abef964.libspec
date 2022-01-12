@@ -1,0 +1,1859 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<keywordspec format="ROBOT" generated="20220112 11:43:30" name="WhiteLibrary" type="library">
+<version>1.6.0</version>
+<scope>global</scope>
+<namedargs>yes</namedargs>
+<doc>WhiteLibrary is a Robot Framework library for automating Windows GUI.
+
+It is a wrapper for [https://github.com/TestStack/White | TestStack.White] automation framework, which is based on
+[https://docs.microsoft.com/en-us/windows/desktop/WinAuto/entry-uiauto-win32 | Microsoft UI Automation API] (UIA).
+
+= Applications and windows =
+To interact with UI items, the correct application and window must be attached to WhiteLibrary.
+
+When application is started with `Launch Application`, the keyword also attaches the application to WhiteLibrary.
+Attaching a running application is done with `Attach Application By Name` or `Attach Application By Id`.
+
+Once the application is attached, the window to interact with is attached with `Attach Window`.
+
+Examples:
+| # Launch application, no separate step for attaching application needed | |
+| `Launch Application` | C:/myApplication.exe |
+| `Attach Window`      | Main window |
+| | |
+| # Switch to an application that is already running | |
+| `Attach Application By Name` | calc1 |
+| `Attach Window`              | Calculator |
+
+= UI items =
+WhiteLibrary uses the same names for UI items (=controls) as White.
+See [https://teststackwhite.readthedocs.io/en/latest/UIItems | White's documentation] for details about mapping
+UIA control types to White's UI item classes.
+
+For example, the UIA control type ``Text`` maps to the ``Label`` class in White (e.g. in WhiteLibrary's keyword `Verify Label`).
+
+== Item locators ==
+Keywords that access UI items (e.g. `Click Button`) use a ``locator`` argument.
+The locator consists of a locator prefix that specifies the search criteria, and the locator value.
+
+Locator syntax is ``prefix:value``.
+The following locator prefixes are available:
+
+| = Prefix =        | = Description =                    |
+| id (or no prefix) | Search by AutomationID. If no prefix is given, the item is searched by AutomationID by default. |
+| text              | Search by exact item text or name. |
+| index             | Search by item index.              |
+| help_text         | Search by HelpTextProperty.        |
+| class_name        | Search by class name.              |
+| control_type      | Search by control type.            |
+
+Examples:
+| `Click Button` | myButton         | # clicks button by its AutomationID |
+| `Click Button` | id:myButton      | # clicks button by its AutomationID |
+| `Click Button` | text:Click here! | # clicks button by the button text  |
+| `Click Button` | index:2          | # clicks button whose index is 2    |
+
+*Note:* Old locator syntax ``prefix=value`` is also valid but it is recommended to use the ``prefix:value`` syntax
+since the old syntax *will be deprecated* in the future.
+
+== Item object as a locator ==
+It is also possible to use an item object reference as the ``locator`` value.
+An item object can be obtained with e.g. `Get Item` or `Get Items` keywords.
+
+The need to use an item object reference can arise for instance when multiple items match the same locator
+and one of the items is selected for further action.
+When using an item object, the action on the item can be executed regardless of the window it is in,
+i.e. the window where the item is located does not necessarily need to be attached.
+However, this does not change the attached window and the operation continues in the attached window after action on
+the referred item is complete.
+
+Example using item object:
+| @{my_buttons}= | `Get Items`         | class_name:MyButtonClass |
+| `Click Button` | ${my_buttons[2]}    | # clicks button object at index 2 of the list |
+
+= Workflow example =
+| ***** Variables *****   | | | |
+| ${TEST APPLICATION}     | C:/path/to/my_application.exe | | |
+| | | | |
+| ***** Settings *****    | | | |
+| Library | WhiteLibrary  | | |
+| | | | |
+| ***** Test Cases *****  | | | |
+| Small Example           | | | |
+| | Launch Application    | ${TEST APPLICATION} | |
+| | Attach Window         | Window Title        | |
+| | Button Text Should Be | my_button           | press this button |
+| | Click Button          | my_button | |
+| | Close Application     | | |
+
+= Waiting and timeouts =
+White handles a lot of the required waiting automatically, including waiting while the window is busy and
+waiting for a window to appear.
+
+White's internal waits use timeouts that can be read and configured with keywords:
+- BusyTimeout defines how long to wait while the window is busy,
+  see `Get White Busy Timeout`, `Set White Busy Timeout`
+- FindWindowTimeout defines how long to wait until the specified window is found,
+ see `Get White Find Window Timeout`, `Set White Find Window Timeout`.
+
+In situations that require additional waiting for UI items, see keywords `Wait Until Item Exists`
+and `Wait Until Item Does Not Exist`.</doc>
+<init>
+<arguments>
+<arg>screenshot_dir=None</arg>
+</arguments>
+<doc>WhiteLibrary can be imported with an optional argument ``screenshot_dir``.
+
+``screenshot_dir`` is the directory where screenshots taken by WhiteLibrary are saved.
+If the given directory does not already exist, it will be created when the first screenshot is taken.
+The directory can also be set at runtime with `Set Screenshot Directory`.
+If the argument is not given, the default location for screenshots is the output directory of the Robot run,
+i.e. the directory where output and log files are generated.</doc>
+<tags>
+</tags>
+</init>
+<kw name="Attach Application By Id">
+<arguments>
+<arg>sut_id</arg>
+<arg>timeout=0</arg>
+</arguments>
+<doc>Attaches a running application by process id.
+
+``sut_id`` is the application process id.
+``timeout`` is the maximum time to wait as a Robot time string. (Optional)
+
+Example:
+| Attach Application By Id | 12188 |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Attach Application By Name">
+<arguments>
+<arg>sut_name</arg>
+<arg>timeout=0</arg>
+</arguments>
+<doc>Attaches a running application by name.
+
+``sut_name`` is the name of the process.
+``timeout`` is the maximum time to wait as a Robot time string. (Optional)
+
+
+Example:
+| Attach Application By Name | UIAutomationTest |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Attach Window">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Attaches WhiteLibrary to a window.
+
+``locator`` is the locator of the window or a window object.
+
+=== Window locator syntax ===
+Syntax for a window locator is ``prefix:value``.
+
+When the locator syntax is used, the window is searched from the currently attached application.
+See `Attach Application By Id`, `Attach Application By Name` or
+`Launch application` for more details about attaching an application.
+
+The following window locators are available:
+| = Prefix =           | = Description =         |
+| title (or no prefix) | Search by the exact window title. If no prefix is given, the window is searched by title by default. |
+| id                   | Search by AutomationID. |
+| class_name           | Search by class name.   |
+
+Examples:
+| Attach Window | Main Window                   | # attach window with title         |
+| Attach Window | id:mainWindow                 | # attach window with Automation ID |
+| Attach Window | class_name:NavigationWindow   | # attach window with ClassName     |
+
+=== Window objects ===
+A window can also be attached by directly passing the window object as the ``locator`` parameter value.
+This may be useful if the correct window cannot be found by using the window locator syntax.
+
+Example:
+| @{windows} | `Get Application Windows` | |
+| Attach Window | ${windows[1]} | # attach window at index 1 in window list |
+
+When using a window object as the ``locator`` parameter value, the window is attached even if it does not
+belong to the currently attached application.
+Note that when attaching a window that belongs to a different application than the currently attached one,
+attaching the window does not affect what application is attached to the library.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Button Text Should Be">
+<arguments>
+<arg>locator</arg>
+<arg>expected_text</arg>
+<arg>case_sensitive=True</arg>
+</arguments>
+<doc>Verifies exact text in a button.
+
+``locator`` is the locator of the button or Button item object.
+Locator syntax is explained in `Item locators`.
+
+``expected_text`` is the expected button text.
+
+``case_sensitive`` defines if the text comparison is case sensitive (True/False). Defaults to ``True``.
+Boolean values are evaluated in the same way as the Robot Framework BuiltIn library does, see
+[http://robotframework.org/robotframework | the documentation of BuiltIn] for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Button Text Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>expected_text</arg>
+<arg>case_sensitive=True</arg>
+</arguments>
+<doc>Verifies expected text is found in a button.
+
+``locator`` is the locator of the button or Button item object.
+Locator syntax is explained in `Item locators`.
+
+``expected_text`` is the expected button text.
+
+``case_sensitive`` defines if the text comparison is case sensitive (True/False). Defaults to ``True``.
+Boolean values are evaluated in the same way as the Robot Framework BuiltIn library does, see
+[http://robotframework.org/robotframework | the documentation of BuiltIn] for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Click Button">
+<arguments>
+<arg>locator</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Clicks a button.
+
+``locator`` is the locator of the button or Button item object.
+Locator syntax is explained in `Item locators`.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Click Item">
+<arguments>
+<arg>locator</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Clicks an item.
+
+``locator`` is the locator of the item or object of an item.
+Locator syntax is explained in `Item locators`.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Click Item In Popup Menu">
+<arguments>
+<arg>*text_path</arg>
+</arguments>
+<doc>Clicks an item in the currently open popup/context menu.
+
+``text_path`` is the path to the item to click.
+
+Examples:
+| Click Popup Menu Item | Paste | | # click an item in the root level |
+| Click Popup Menu Item | Refactor | Rename | # click a sub item |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Click Menu Button">
+<arguments>
+<arg>locator</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Clicks a menu button.
+
+``locator`` is the locator of the menu button or Menu item object.
+Locator syntax is explained in `Item locators`.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Click Toolstrip Button By Index">
+<arguments>
+<arg>locator</arg>
+<arg>index</arg>
+</arguments>
+<doc>Clicks a button in a toolstrip (toolbar).
+
+``locator`` is the locator of the toolstrip.
+
+``index`` is the zero-based index of the toolstrip button to click.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Close Application">
+<arguments>
+</arguments>
+<doc>Closes the attached application.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Close Window">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Closes a window.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the currently attached window is closed.
+See `Attach Window` for details about window locators and attaching a window.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Combobox Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that a combobox contains an item with text ``expected``.
+
+Fails if the combobox does not contain an item with the given text.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected item text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Combobox Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that a combobox does not contain an item with text ``expected``.
+
+Fails if the combobox contains an item with the given text.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected item text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Item">
+<arguments>
+<arg>locator</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks an item.
+
+``locator`` is the locator of the item or object of an item.
+Locator syntax is explained in `Item locators`.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Listview Cell">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks a listview cell.
+
+``locator`` is the locator of the listview or ListView item object.
+Locator syntax is explained in `Item locators`.
+
+``column_name`` is the name of the column.
+
+``row_index`` is the zero-based row index.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.
+
+Example:
+| Double Click Listview Cell | id:addressList | Street | 0 | # double click cell in the column "Street" of the first row |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Listview Cell By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks a listview cell at index.
+
+``locator`` is the locator of the listview or ListView item object.
+Locator syntax is explained in `Item locators`.
+
+``row_index`` is the zero-based row index.
+
+``column_index`` is the zero-based column index.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.
+
+Example:
+| Double Click Listview Cell By Index | id:addressList | 0 | 0 |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Listview Row">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks a listview row.
+
+``locator`` is the locator of the listview or ListView item object.
+Locator syntax is explained in `Item locators`.
+
+``column_name`` and ``cell_text`` define the row. Row is the first matching row where text in column
+``column_name`` is ``cell_text``.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.
+
+Example:
+| Double Click Listview Row | id:addressList | City | Helsinki | # double click row that has the text "Helsinki" in the column "City" |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Listview Row By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks a listview row at index.
+
+``locator`` is the locator of the listview or ListView item object.
+Locator syntax is explained in `Item locators`.
+
+``row_index`` is the zero-based row index.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.
+
+Example:
+| Double Click Listview Row By Index | id:addressList | 4 |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Listview Row By Text">
+<arguments>
+<arg>locator</arg>
+<arg>text</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Double clicks a listview row with matching text.
+
+``locator`` is the locator of the listview or the ListView item object.
+Locator syntax is explained in `Item locators`.
+
+``text`` is the exact text of the row. If there are multiple cells on the row, the text will be matched
+against the first cell.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.
+
+Example:
+| Double Click Listview Row By Text | id:cities | Berlin |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Double Click Tree Node">
+<arguments>
+<arg>locator</arg>
+<arg>*node_path</arg>
+</arguments>
+<doc>Double-clicks a tree node.
+
+``locator`` is the locator of the tree or Tree item object.
+Locator syntax is explained in `Item locators`.
+
+``node_path`` is the path the to node to double-click.
+
+See examples of the node path in `Select Tree Node` documentation.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Drag And Drop">
+<arguments>
+<arg>locator1</arg>
+<arg>locator2</arg>
+</arguments>
+<doc>Drags item with locator ``locator1`` to item with locator ``locator2``.
+
+``locator1`` is the locator of the draggable object or draggable item.
+
+``locator2`` is the locator of the target for the draggable object or target item itself.
+
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Expand Tree Node">
+<arguments>
+<arg>locator</arg>
+<arg>*node_path</arg>
+</arguments>
+<doc>Expands a tree node.
+
+``locator`` is the locator of the tree or Tree item object.
+Locator syntax is explained in `Item locators`.
+
+``node_path`` is the path the to node to expand.
+
+See examples of the node path in `Select Tree Node` documentation.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Application Windows">
+<arguments>
+</arguments>
+<doc>Returns a list of windows belonging to the currently attached application.
+
+Assumes that an application is attached.
+See `Attach Application By Name` and `Attach Application By Id` for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Check Box State">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the state of a check box.
+
+Returns `True` if the check box is selected, `False` if not.
+
+``locator`` is the locator of the check box or CheckBox item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Combobox Selected Text">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the text of the selected combobox item.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Desktop Windows">
+<arguments>
+</arguments>
+<doc>Returns a list of windows on the desktop.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Item">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the first item that matches the given locator.
+
+``locator`` is the locator of the item.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Items">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns a list of items that match the given ``locator``.
+
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Listbox Selected Text">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the text of the selected listbox item.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Listview Cell Text">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+</arguments>
+<doc>Returns text of a listview cell.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Listview Cell Text By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+</arguments>
+<doc>Returns text of a listview cell at index.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Listview Row Text">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+</arguments>
+<doc>Returns a list containing text of each cell in a listview row.
+
+See `Double Click Listview Row` for details about the arguments ``locator``, ``column_name``, and ``cell_text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Listview Row Text By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+</arguments>
+<doc>Returns text of a listview row as a list.
+
+See `Double Click Listview Row By Index` for details about arguments ``locator`` and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Mouse Location">
+<arguments>
+</arguments>
+<doc>Returns mouse position as tuple (x, y).
+
+Position is relative to application window top left.
+If mouse is outside the application window the return values is either negative or bigger than window dimensions.
+
+Example:
+| ${x} | ${y} | Get Mouse Location |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Progressbar Value">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the value of a progress bar.
+
+``locator`` is the locator of the progress bar or ProgressBar item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Radio Button State">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the state of a radio button.
+
+Returns `True` if the radio button is selected, `False` if not.
+
+``locator`` is the locator of the radio button or RadioButton item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Slider Value">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the value of a slider.
+
+``locator`` is the locator of the slider or Slider item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Tab Pages">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Gets all tab pages and returns them as a list.
+
+``locator`` is the locator of the tab control item or Tab item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Text From Label">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the text of a label.
+
+``locator`` is the locator of the label or Label item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Text From Textbox">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Returns the text of a text box.
+
+``locator`` is the locator of the text box or Textbox item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get White Busy Timeout">
+<arguments>
+</arguments>
+<doc>Returns BusyTimeout value of White.
+
+See also `Set White Busy Timeout`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get White Double Click Interval">
+<arguments>
+</arguments>
+<doc>Returns DoubleClickInterval value of White.
+
+See also `Set White Double Click Interval`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get White Drag Step Count">
+<arguments>
+</arguments>
+<doc>Returns DragStepCount value of White.
+
+See also `Set White Drag Step Count`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get White Find Window Timeout">
+<arguments>
+</arguments>
+<doc>Returns FindWindowTimeout value of White.
+
+See also `Set White Find Window Timeout`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Get Window Title">
+<arguments>
+</arguments>
+<doc>Returns title of the currently attached window.
+
+Assumes that a window is attached. See `Attach Window` for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Hold Special Key">
+<arguments>
+<arg>key</arg>
+</arguments>
+<doc>Hold down a special key.
+
+``key`` must be one of the accepted special keys, see documentation of
+`Press Special Key`</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Input Text To Textbox">
+<arguments>
+<arg>locator</arg>
+<arg>input_value</arg>
+</arguments>
+<doc>Writes text to a textbox.
+
+``locator`` is the locator of the text box or Textbox item object.
+Locator syntax is explained in `Item locators`.
+
+``input_value`` is the text to write.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Item Should Be Disabled">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Verifies that an item is disabled.
+
+``locator`` is the locator of the item.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Item Should Be Enabled">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Verifies that an item is enabled.
+
+``locator`` is the locator of the item.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Launch Application">
+<arguments>
+<arg>sut_path</arg>
+<arg>args=None</arg>
+</arguments>
+<doc>Launches an application.
+
+``sut_path`` is the absolute path to the application to launch.
+
+``args`` is a string of arguments to use when starting the application (optional).
+
+Examples:
+| Launch Application | C:/path/to/MyApp.exe | | # Launch without arguments |
+| Launch Application | C:/path/to/MyApp.exe | /o log.txt | # Launch with arguments |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Leave Special Key">
+<arguments>
+<arg>key</arg>
+</arguments>
+<doc>Leave a special key that was previously held down.
+
+``key`` must be one of the accepted special keys, see documentation of
+`Press Special Key`</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listbox Selection Should Be">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Checks the listbox selection.
+
+Fails if the selection was not as expected.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected selection value.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listbox Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Checks that listbox contains an item with text ``expected``.
+
+Fails if the listbox does not contain an item with the given text.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected item text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listbox Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that a listbox does not contain an item with text ``expected``.
+
+Fails if the listbox contains an item with the given text.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected item text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell At Index Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview cell contains text ``expected``.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell At Index Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview cell does not contain text ``expected``.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview cell contains text ``expected``.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview cell does not contain text ``expected``.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Text At Index Should Be">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that listview cell text is ``expected``.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Text At Index Should Not Be">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that listview cell text is not ``expected``.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Text Should Be">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that listview cell text is ``expected``.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Cell Text Should Not Be">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that listview cell text is not ``expected``.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Row At Index Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that any cell in the given listview row contains text ``expected``.
+
+See `Double Click Listview Row By Index` for details about arguments ``locator`` and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Row At Index Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that any cell in the given listview row does not contain text ``expected``.
+
+See `Double Click Listview Row By Index` for details about arguments ``locator`` and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Row Should Contain">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview row contains text ``expected``.
+
+See `Double Click Listview Row` for details about the arguments ``locator``, ``column_name``, and ``cell_text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Listview Row Should Not Contain">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the given listview row does not contain text ``expected``.
+
+See `Double Click Listview Row` for details about the arguments ``locator``, ``column_name``, and ``cell_text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Maximize Window">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Maximizes a window.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the currently attached window is maximized.
+See `Attach Window` for details about attaching a window and window locator syntax.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Minimize Window">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Minimizes a window.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the currently attached window is minimized.
+See `Attach Window` for details about attaching a window and window locator syntax.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Click">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Clicks mouse at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Double Click">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Double clicks mouse at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Left Button Down">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Presses left mouse button down at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Left Button Up">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Releases left mouse button up at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Right Click">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Right clicks mouse at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Mouse Right Double Click">
+<arguments>
+<arg>x=None</arg>
+<arg>y=None</arg>
+</arguments>
+<doc>Right double clicks mouse at given position.
+
+Position (``x``, ``y``) is relative to application window top left.
+If no coordinates are given it uses current mouse position.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Move Mouse">
+<arguments>
+<arg>x</arg>
+<arg>y</arg>
+</arguments>
+<doc>Add (``x``, ``y``) to current mouse location.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Press Keys">
+<arguments>
+<arg>keys</arg>
+</arguments>
+<doc>Press a key or keys.
+
+``keys`` is the key or keys to press.
+
+Example:
+| Press Keys | a |
+| Press Keys | Text with special characters! |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Press Special Key">
+<arguments>
+<arg>key</arg>
+</arguments>
+<doc>Press a special key (Ctrl, tab, alt for example).
+
+``key`` must be one of the following:
+SHIFT, CONTROL, ALT, LEFT_ALT, RIGHT_ALT, RETURN ,RIGHT, BACKSPACE,
+LEFT, ESCAPE, TAB, HOME, END, UP, DOWN, INSERT, DELETE, CAPS, F1, F2,
+F3, F4, F5, F6, F7, F8, F9, F11, F12, F13, F14,F15, F16, F17, F18, F19,
+F20, F21, F22, F23,F24, PAGEUP, PAGEDOWN, PRINT, PRINTSCREEN, SPACE,
+NUMLOCK, SCROLL, LWIN, RWIN</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Restore Window">
+<arguments>
+<arg>window_title=None</arg>
+</arguments>
+<doc>Restores a window.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the currently attached window is restored.
+See `Attach Window` for details about attaching a window and window locator syntax.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Item">
+<arguments>
+<arg>locator</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks an item.
+
+``locator`` is the locator of the item or object of an item.
+Locator syntax is explained in `Item locators`.
+
+Optional arguments ``x_offset`` and ``y_offset`` can be used to define the coordinates to click at,
+relative to the center of the item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Listview Cell">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks a listview cell using its column name and row index.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Listview Cell By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks a listview cell at index.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Listview Row">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks a listview row that has given text in given column.
+
+See `Double Click Listview Row` for details about the arguments ``locator``, ``column_name``, and ``cell_text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Listview Row By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks a listview row at index.
+
+See `Double Click Listview Row By Index` for details about arguments ``locator`` and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Listview Row By Text">
+<arguments>
+<arg>locator</arg>
+<arg>text</arg>
+<arg>x_offset=0</arg>
+<arg>y_offset=0</arg>
+</arguments>
+<doc>Right clicks a listview row with matching text.
+
+See `Double Click Listview Row By Text` for details about arguments ``locator`` and ``text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Right Click Tree Node">
+<arguments>
+<arg>locator</arg>
+<arg>*node_path</arg>
+</arguments>
+<doc>Right-clicks a tree node.
+
+``locator`` is the locator of the tree or Tree item object.
+Locator syntax is explained in `Item locators`.
+
+``node_path`` is the path the to node to right-click.
+
+See examples of the node path in `Select Tree Node` documentation.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Combobox Index">
+<arguments>
+<arg>locator</arg>
+<arg>item_index</arg>
+</arguments>
+<doc>Selects a value from combobox by using its index.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``item_index`` is the index to be selected.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Combobox Value">
+<arguments>
+<arg>locator</arg>
+<arg>value</arg>
+</arguments>
+<doc>Selects a value from a combobox.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``value`` is the value to be selected.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listbox Index">
+<arguments>
+<arg>locator</arg>
+<arg>item_index</arg>
+</arguments>
+<doc>Selects an item by its index from a listbox.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.
+
+``item_index`` is the index of the item to select.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listbox Value">
+<arguments>
+<arg>locator</arg>
+<arg>value</arg>
+</arguments>
+<doc>Selects a value from a listbox.
+
+``locator`` is the locator of the listbox or ListBox item object.
+Locator syntax is explained in `Item locators`.
+
+``value`` is the value to be selected.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listview Cell">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>row_index</arg>
+</arguments>
+<doc>Selects a listview cell.
+
+See `Double Click Listview Cell` for details about arguments ``locator``, ``column_name``, and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listview Cell By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+<arg>column_index</arg>
+</arguments>
+<doc>Selects a listview cell at index.
+
+See `Double Click Listview Cell By Index` for details about arguments ``locator``, ``row_index``, and ``column_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listview Row">
+<arguments>
+<arg>locator</arg>
+<arg>column_name</arg>
+<arg>cell_text</arg>
+</arguments>
+<doc>Selects a listview row.
+
+See `Double Click Listview Row` for details about the arguments ``locator``, ``column_name``, and ``cell_text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listview Row By Index">
+<arguments>
+<arg>locator</arg>
+<arg>row_index</arg>
+</arguments>
+<doc>Selects a listview row at index.
+
+See `Double Click Listview Row By Index` for details about arguments ``locator`` and ``row_index``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Listview Row By Text">
+<arguments>
+<arg>locator</arg>
+<arg>text</arg>
+</arguments>
+<doc>Selects a listview row with matching text.
+
+See `Double Click Listview Row By Text` for details about arguments ``locator`` and ``text``.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Modal Window">
+<arguments>
+<arg>window_title</arg>
+</arguments>
+<doc>Attaches a modal window.
+
+``window_title`` is the title of the window.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Radio Button">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Selects a radio button.
+
+``locator`` is the locator of the radio button or RadioButton item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Tab Page">
+<arguments>
+<arg>locator</arg>
+<arg>title</arg>
+</arguments>
+<doc>Selects a tab page.
+
+``locator`` is the locator of the tab control item or Tab item object.
+Locator syntax is explained in `Item locators`.
+
+``title`` is the title of the tab page.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Tab Page By Index">
+<arguments>
+<arg>locator</arg>
+<arg>index</arg>
+</arguments>
+<doc>Selects a tab page by index.
+
+``locator`` is the locator of the tab control item or Tab item object.
+Locator syntax is explained in `Item locators`.
+
+``index`` is integer index the tab page. Indexing starts from 0.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Select Tree Node">
+<arguments>
+<arg>locator</arg>
+<arg>*node_path</arg>
+</arguments>
+<doc>Selects a tree node.
+
+``locator`` is the locator of the tree or Tree item object.
+Locator syntax is explained in `Item locators`.
+
+``node_path`` is the path the to node to select.
+
+Example tree (tree locator is tree_id):
+| root
+| |
+| |---parent_node
+| |   |
+| |   |---child_node
+| |   |
+| |   |---sibling_node
+| |
+| |---other parent
+
+Example usage to select ``sibling node``:
+| Select Tree Node | tree_id | root | parent_node | sibling_node |</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set Mouse Location">
+<arguments>
+<arg>x</arg>
+<arg>y</arg>
+</arguments>
+<doc>Sets mouse position to (``x``, ``y``).
+
+Position is relative to application window top left.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set Screenshot Directory">
+<arguments>
+<arg>path</arg>
+</arguments>
+<doc>Sets the directory where WhiteLibrary stores screenshots and returns the previously set path.
+
+If the given directory does not exist in the system, it will be created when the first screenshot is taken.
+
+``path`` is the directory path.
+
+The directory can also be set when the library is imported, see `Importing` for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set Slider Value">
+<arguments>
+<arg>locator</arg>
+<arg>value</arg>
+</arguments>
+<doc>Sets a slider to the specified value.
+
+``locator`` is the locator of the slider or Slider item object.
+Locator syntax is explained in `Item locators`.
+
+``value`` is the value to set.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set White Busy Timeout">
+<arguments>
+<arg>timeout</arg>
+</arguments>
+<doc>Sets BusyTimeout for White and returns original value.
+
+``timeout`` is the timeout value as Robot time string.
+
+ Default timeout is 5 seconds.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set White Double Click Interval">
+<arguments>
+<arg>interval</arg>
+</arguments>
+<doc>Sets DoubleClickInterval for White and returns original value.
+
+DoubleClickInterval adds delay in double click action between clicks.
+
+``interval`` is the interval value as Robot time string.
+
+Default interval is 0 milliseconds.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set White Drag Step Count">
+<arguments>
+<arg>value</arg>
+</arguments>
+<doc>Sets DragStepCount for White.
+
+``value`` is the DragStepCount value as integer.
+
+DragStepCount defines how many steps White uses to move dragged object to the destination.
+With default value 1 the dragged object is moved instantly in a single step from start to destination.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Set White Find Window Timeout">
+<arguments>
+<arg>timeout</arg>
+</arguments>
+<doc>Sets FindWindowTimeout for White and returns original value.
+
+``timeout`` is the timeout value as Robot time string.
+
+Default timeout is 30 seconds.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Take Desktop Screenshot">
+<arguments>
+</arguments>
+<doc>Takes a screenshot of the whole desktop and inserts screenshot link to log file.
+
+Returns path to the screenshot file.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Take Screenshots On Failure">
+<arguments>
+<arg>status</arg>
+</arguments>
+<doc>Disables or enables automatic screenshot capturing on failure.
+
+``status`` is the desired state (True/False) of automatic screenshot on failure.
+Boolean values are evaluated in the same way as the Robot Framework BuiltIn library does, see
+[http://robotframework.org/robotframework | the documentation of BuiltIn] for details.
+
+WhiteLibrary automatically takes a screenshot on failure unless it is disabled with this keyword.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Toggle Check Box">
+<arguments>
+<arg>locator</arg>
+</arguments>
+<doc>Toggles a check box.
+
+``locator`` is the locator of the check box or CheckBox item object.
+Locator syntax is explained in `Item locators`.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Button">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>*DEPRECATED.* Use `Button Text Should Be` or `Button Text Should Contain` instead.
+
+Verifies text in a button.
+
+``locator`` is the locator of the button or Button item object.
+
+``expected`` is the expected button text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Check Box">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies state of a check box.
+
+``locator`` is the locator of the check box or CheckBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected state (True/False).</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Combobox Item">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>*DEPRECATED* Please use Verify Combobox Selection instead.
+
+Verifies the selected value of a combobox.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected selection value.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Combobox Selection">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the combobox value is selected.
+
+``locator`` is the locator of the combobox or ComboBox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected selection value.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Label">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies text of a label.
+
+``locator`` is the locator of the label or Label item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected text.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Menu">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies the text of a menu item.
+
+``locator`` is the locator of the menu item or Menu item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected text of the menu item.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Progressbar Value">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies the value of a progress bar.
+
+``locator`` is the locator of the progress bar or ProgressBar item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected value of the progress bar.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Radio Button">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies state of a radio button.
+
+``locator`` is the locator of the radio button or RadioButton item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected state (True/False).</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Slider Value">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies a slider value.
+
+``locator`` is the locator of the slider or Slider item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected value of the slider.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Verify Text In Textbox">
+<arguments>
+<arg>locator</arg>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies text in a text box.
+
+``locator`` is the locator of the text box or Textbox item object.
+Locator syntax is explained in `Item locators`.
+
+``expected`` is the expected text of the text box.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Wait Until Item Does Not Exist">
+<arguments>
+<arg>locator</arg>
+<arg>timeout</arg>
+</arguments>
+<doc>Waits until no items with given locator exist in the attached window.
+
+ Fails if ``timeout`` is exceeded.
+
+``locator`` is the locator of the item.
+Locator syntax is explained in `Item locators`.
+
+``timeout`` is the maximum time to wait as a Robot time string.
+
+See `Waiting and timeouts` for more information about waiting in WhiteLibrary.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Wait Until Item Exists">
+<arguments>
+<arg>locator</arg>
+<arg>timeout</arg>
+</arguments>
+<doc>Waits until an item with given locator exists in the attached window.
+
+ Fails if ``timeout`` is exceeded.
+
+``locator`` is the locator of the item.
+Locator syntax is explained in `Item locators`.
+
+``timeout`` is the maximum time to wait as a Robot time string.
+
+See `Waiting and timeouts` for more information about waiting in WhiteLibrary.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Window Should Be Maximized">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Verifies that a window is maximized.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the status of the currently attached window is verified.
+See `Attach Window` for details about attaching a window and window locator syntax.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Window Should Be Minimized">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Verifies that a window is minimized.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If no ``locator`` value is given, the status of the currently attached window is verified.
+See `Attach Window` for details about attaching a window and window locator syntax.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Window Should Be Restored">
+<arguments>
+<arg>locator=None</arg>
+</arguments>
+<doc>Verifies that a window is restored.
+
+``locator`` is the locator of the window or a window object (optional).
+
+If title is not given, currently attached window status is queried.
+See `Attach Window` for more details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Window Title Should Be">
+<arguments>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the title of the currently attached window is ``expected``.
+
+Assumes that a window is attached. See `Attach Window` for details.</doc>
+<tags>
+</tags>
+</kw>
+<kw name="Window Title Should Contain">
+<arguments>
+<arg>expected</arg>
+</arguments>
+<doc>Verifies that the title of the currently attached window contains text ``expected``.
+
+Assumes that a window is attached. See `Attach Window` for details.</doc>
+<tags>
+</tags>
+</kw>
+</keywordspec>
